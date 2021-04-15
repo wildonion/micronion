@@ -1,0 +1,42 @@
+
+
+
+
+
+https://mirrors.tuna.tsinghua.edu.cn/lede/releases/19.07.1/targets/ramips/mt76x8/
+https://downloads.openwrt.org/releases/19.07.7/targets/ramips/mt76x8/
+
+openwrt password : skw92@wrt
+skw92 mac page password : iwbtmyh
+
+
+=================================
+SETUP MT76*8 SKW92 TO RUN OPENWRT
+=================================
+
+cat /proc/partitions =====> find your sdcard partitions | mmcblk0 for sdcard reader and sd* for usb sdcard reader
+sudo dd if=/dev/zero of=/dev/sdc bs=1M count=16
+sudo apt install picocom
+
+
+* create 2 partitions using cfdisk or gparted or Disks
+
+
+____________________  SDCARD PARTITIONING _____________________
+|	/dev/sdc1 => rootfs with size 5GB and type ext4
+|	/dev/sdc2 => boot with type fat16
+---------------------------------------------------------------
+
+
+sudo umount /dev/sdc1
+sudo umount /dev/sdc2
+sudo mkfs.vfat -F 16 -n boot /dev/mmcblk0p2
+sudo mkfs.ext4 -L rootfs -E nodiscard /dev/mmcblk0p1
+sudo tar -C /media/mehran/rootfs/ -xf openwrt_rootfs.tar.gz
+cp openwrt-19.07.7-ramips-mt76x8-skylab_skw92a-squashfs-sysupgrade.bin /media/mehran/boot/
+sudo dnsmasq --port=0 --enable-tftp --tftp-root=/home/mehran/Desktop/tftp --tftp-no-blocksize --user=root --group=root
+sudo chmod a+rw /dev/ttyUSB0
+sudo picocom -b 115200 /dev/ttyUSB0
+
+
+

@@ -1,0 +1,135 @@
+
+
+NOTE : https://downloads.openwrt.org/releases/packages-18.06/arm_cortex-a9_neon/luci/
+NOTE : https://stackoverflow.com/questions/27176781/bash-file-returns-unexpected-token-do-r/53432280
+NOTE : offline luci installation => https://openwrt.org/docs/guide-user/luci/luci.essentials
+NOTE : openwrt lan setup => https://openwrt.org/docs/guide-quick-start/ssh_connect_to_the_internet_and_install_luci
+NOTE : config openwrt on raspi => https://www.youtube.com/watch?v=TsOpO6O4xDE
+NOTE : openwrt packages => https://downloads.openwrt.org/releases/19.07.7/targets/imx6/generic/packages/
+NOTE : get rid of read only partition => sudo mount -o remount,rw /dev/mmcblk0p1
+NOTE : mmcblk0p2 is the second partition on sdcard
+NOTE : $loadaddr is the kernel address and $fdt_addr is the dtb address in memory of the board
+NOTE : if you have problem with formatting sdcard use usb sdcard reader instead of sdcard reader
+NOTE : in our case we're using sdcard reader wich has mmcblk0 series of partitions
+NOTE : password for openwrt is imx6ul@wrt
+NOTE : password for skw92 mac page is iwbtmyh
+NOTE : remember to set a random ethaddr differ from the host mac address and setup uart and ethernet cable on the board
+NOTE : plug the ethernet cable from board and the host to a modem that has internet connection
+NOTE : ipv4 for the board will generate based on ethaddr which is set on uboot and the subnetmask on that LAN using dhcp
+ 
+
+
+
+============================================
+INSTALL OPENWRT ON IMX6UL USING UART CONSOLE
+============================================
+
+cat /proc/partitions =====> find your sdcard partitions | mmcblk0 for sdcard reader and sd* for usb sdcard reader
+sudo dd if=/dev/zero of=/dev/mmcblk0 bs=1M count=16
+sudo apt install picocom
+
+
+* create 3 partitions using cfdisk or gparted or Disks
+
+
+____________________  SDCARD PARTITIONING _____________________
+|	/dev/mmcblk0p1 => boot with size 490MB and type fat16
+|	/dev/mmcblk0p2 => rootfs with size 1.76GB and type ext4
+|	/dev/mmcblk0p3 => media with size 4.39GB and type ext4
+---------------------------------------------------------------
+
+
+sudo umount /dev/mmcblk0p1
+sudo umount /dev/mmcblk0p2
+sudo umount /dev/mmcblk0p3
+sudo mkfs.vfat -F 16 -n boot /dev/mmcblk0p1
+sudo mkfs.ext4 -L rootfs -E nodiscard /dev/mmcblk0p2
+sudo mkfs.ext4 -L media -E nodiscard /dev/mmcblk0p3
+sudo tar -C /media/mehran/rootfs/ -xf openwrt-imx6-default-rootfs.tar.gz
+cp zImage /media/mehran/boot/
+cp myd-y6ull-gpmi-weim.dtb /media/mehran/boot/
+sudo chmod a+rw /dev/ttyUSB0
+sudo picocom -b 115200 /dev/ttyUSB0
+
+u-boot commands:
+	mmc dev
+	mmc list
+	ls mmc 0:0
+	ls mmc 0:1	
+	fatload mmc 0:1 $fdt_addr myd-y6ull-gpmi-weim.dtb
+	fatload mmc 0:1 $loadaddr zImage
+	setenv ethaddr f0:76:1d:38:89:e2
+	setenv bootargs console=ttymxc0,115200 root=/dev/mmcblk0p2 rw rootfstype=ext4 rootwait
+	saveenv
+	bootz $loadaddr - $fdt_addr
+
+
+
+BusyBox v1.33.0 () built-in shell (ash)
+
+  _______                     ________        __
+ |       |.-----.-----.-----.|  |  |  |.----.|  |_
+ |   -   ||  _  |  -__|     ||  |  |  ||   _||   _|
+ |_______||   __|_____|__|__||________||__|  |____|
+          |__| W I R E L E S S   F R E E D O M
+ -----------------------------------------------------
+ OpenWrt SNAPSHOT, r15949-ce8b535ed3
+ -----------------------------------------------------
+root@OpenWrt:/# passwd
+root@OpenWrt:/# ifconfig
+eth0      Link encap:Ethernet  HWaddr F0:76:1D:38:89:E2  
+          inet addr:192.168.1.116  Bcast:192.168.1.255  Mask:255.255.255.0
+          inet6 addr: fe80::f276:1dff:fe38:89e2/64 Scope:Link
+          UP BROADCAST RUNNING MULTICAST  MTU:1500  Metric:1
+          RX packets:203 errors:0 dropped:30 overruns:0 frame:0
+          TX packets:94 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:1000 
+          RX bytes:22259 (21.7 KiB)  TX bytes:9381 (9.1 KiB)
+
+lo        Link encap:Local Loopback  
+          inet addr:127.0.0.1  Mask:255.0.0.0
+          inet6 addr: ::1/128 Scope:Host
+          UP LOOPBACK RUNNING  MTU:65536  Metric:1
+          RX packets:52 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:52 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:0 
+          RX bytes:5498 (5.3 KiB)  TX bytes:5498 (5.3 KiB)
+root@OpenWrt:/# uci set network.lan.proto="dhcp"
+root@OpenWrt:/# uci set network.lan.dns="8.8.8.8"
+root@OpenWrt:/# uci commit
+root@OpenWrt:/# service network restart
+root@OpenWrt:/# reboot
+
+
+host@terminal:~$ ssh root@192.168.1.116 
+root@OpenWrt:/# opkg update && opkg install luci
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
